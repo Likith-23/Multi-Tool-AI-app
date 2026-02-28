@@ -88,16 +88,39 @@ def run_math_mastermind():
     st.markdown(html + "</div>", unsafe_allow_html=True)
 
 
-
-
-# ✅ placeholder: once you paste Part 2 below, safe ai image generation will work
 def run_safe_ai_image_generator():
-    st.info("Paste Part 2 code to enable Safe AI Image Generator.")
-
-
-
-
-
+    FORBIDDEN = ["violence","weapon","gun","blood","nude","porn","drugs","hate","racism","sex","terror","bomb","abuse","kill","death","suicide","self-harm","hate speech"]
+    BAD = re.compile("|".join(map(re.escape, FORBIDDEN)), re.I)
+    #add this model
+    IMG_MODEL = "stabilityai/stable-diffusion-xl-base-1.0"
+    img_client = InferenceClient(provider="hf-inference", api_key=config.HF_API_KEY)
+    st.title("🖼️ Safe AI Image Generator")
+    def generate_image(prompt: str):
+        if BAD.search(prompt):
+            return None, "⚠️ Unsafe Prompt"
+        try:
+            return img_client.text_to_image(prompt=prompt, model=IMG_MODEL), None
+        except Exception as e:
+            return None, f"Error during Image Generation: {e}"
+    with st.form("img form"):
+        p = st.text_area("Image Description", height=120)
+        ok = st.form_submit_button("Generate Image")
+    if ok: 
+        if not p.strip():
+            st.warning("⚠️ Enter a desciption")
+        else:
+            with st.spinner("Generating Image..."):
+                im, err = generate_image(p.strip())
+            if err: 
+                st.error(err)
+            else:
+                st.image(im, use_container_width=True)
+                st.session_state.generated_image = im
+    im = st.session_state.get("Generated Image")
+    if im:
+        buf = BytesIO(); im.save(buf, format="PNG")
+        st.download_button("📥 Download Image", buf.getvalue(), "ai_generated_image.png", "image/png")
+        
 def main():
     st.sidebar.title("Choose AI Feature")
     opt = st.sidebar.selectbox("", ["AI Teaching Assistant", "Math Mastermind", "Safe AI Image Generator"])
